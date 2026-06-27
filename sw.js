@@ -1,7 +1,7 @@
 // sw.js — 서비스워커. 앱 셸 precache(cache-first) + 폰트 런타임 캐시 (ADR-007).
 // 갱신 시 CACHE 버전을 올려 강제 교체할 것.
 
-const CACHE = 'lostruins-v10';
+const CACHE = 'lostruins-v11';
 
 /** precache 대상(상대경로 — Pages 루트 /lostruins-web/) */
 const APP_SHELL = [
