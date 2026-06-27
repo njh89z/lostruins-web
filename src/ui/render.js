@@ -7,6 +7,9 @@ import { scorePlayer } from '../core/rules.js';
 import { el, cardEl, scoreTableEl, SUIT_META } from './components.js';
 import { dealIn, pulse, overlayIn } from './animations.js';
 
+/** 빌드 버전(우하단 배지). 배포(sw 캐시)와 함께 올린다 — 갱신 확인용 */
+const BUILD = 'v16';
+
 /**
  * @param {HTMLElement} root
  * @param {AppState} appState
@@ -165,6 +168,9 @@ export function render(root, appState, dispatch) {
   if (ui.showStartModal) {
     root.append(startModal(ui.difficulty, dispatch));
   }
+
+  // 버전 배지(갱신 확인용)
+  root.append(el('div', { className: 'build', text: BUILD }));
 }
 
 function resultOverlay(game, dispatch) {

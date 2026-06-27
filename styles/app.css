@@ -519,3 +519,14 @@ body {
   box-shadow: 0 0 0 2px var(--gold), 0 0 12px rgba(200, 162, 75, 0.6);
   z-index: 3;
 }
+
+/* 버전 배지(우하단, 갱신 확인용) */
+.build {
+  position: fixed;
+  right: 4px;
+  bottom: 2px;
+  font-size: 9px;
+  color: #ffffff55;
+  z-index: 30;
+  pointer-events: none;
+}
