@@ -29,10 +29,9 @@ export function render(root, appState, dispatch) {
         className: 'btn btn--ghost',
         text: '새 게임',
         attrs: { type: 'button' },
-        onClick: () => dispatch({ type: 'newGame' }),
+        onClick: () => dispatch({ type: 'openStartModal' }),
       }),
     ]),
-    difficultyControl(ui.difficulty, dispatch),
     el('p', { className: `message${ui.aiThinking ? ' is-thinking' : ''}`, text: ui.message }),
   );
 
@@ -137,6 +136,11 @@ export function render(root, appState, dispatch) {
   if (game.status === 'finished') {
     root.append(resultOverlay(game, dispatch));
   }
+
+  // ── 난이도 선택 모달(최상단) ───────────────────────────
+  if (ui.showStartModal) {
+    root.append(startModal(ui.difficulty, dispatch));
+  }
 }
 
 function resultOverlay(game, dispatch) {
@@ -153,7 +157,7 @@ function resultOverlay(game, dispatch) {
       className: 'btn btn--primary',
       text: '다시하기',
       attrs: { type: 'button' },
-      onClick: () => dispatch({ type: 'newGame' }),
+      onClick: () => dispatch({ type: 'openStartModal' }),
     }),
   ]);
   const overlay = el('div', { className: 'result' }, [panel]);
@@ -162,28 +166,39 @@ function resultOverlay(game, dispatch) {
 }
 
 const DIFFICULTY_LABELS = { easy: '쉬움', normal: '보통', hard: '어려움' };
+const DIFFICULTY_DESC = {
+  easy: '느긋하게 한 판',
+  normal: '균형 잡힌 상대',
+  hard: '수읽기로 강하게',
+};
 
-/** 난이도 선택 줄(라벨 + 세그먼트). 바꾸면 그 난이도로 새 판 시작 */
-function difficultyControl(current, dispatch) {
-  const row = el('div', { className: 'difficulty-row' }, [
-    el('span', { className: 'difficulty-row__label', text: '난이도' }),
+/** 난이도 선택 모달(첫 시작 / 새 게임 / 다시하기 때 표시) */
+function startModal(current, dispatch) {
+  const panel = el('div', { className: 'modal__panel' }, [
+    el('h2', { className: 'modal__title', text: '난이도 선택' }),
+    el('p', { className: 'modal__sub', text: '선택하면 새 게임이 시작됩니다' }),
   ]);
-  const seg = el('div', { className: 'difficulty', attrs: { role: 'group', 'aria-label': '난이도' } });
   for (const level of ['easy', 'normal', 'hard']) {
-    seg.append(
+    panel.append(
       el('button', {
-        className: `difficulty__opt${current === level ? ' is-active' : ''}`,
-        text: DIFFICULTY_LABELS[level],
+        className: `diff-card${current === level ? ' is-current' : ''}`,
         attrs: { type: 'button' },
-        onClick: () => {
-          if (level === current) return;
-          dispatch({ type: 'setDifficulty', level });
-        },
-      }),
+        onClick: () => dispatch({ type: 'startGame', level }),
+      }, [
+        el('span', { className: 'diff-card__name', text: DIFFICULTY_LABELS[level] }),
+        el('span', { className: 'diff-card__desc', text: DIFFICULTY_DESC[level] }),
+      ]),
     );
   }
-  row.append(seg);
-  return row;
+  // 배경 탭으로 닫기(이미 진행 중인 판으로 복귀)
+  const overlay = el('div', {
+    className: 'modal',
+    onClick: (e) => {
+      if (e.target === overlay) dispatch({ type: 'closeStartModal' });
+    },
+  }, [panel]);
+  overlayIn(panel);
+  return overlay;
 }
 
 /** 손패 정렬: 색(SUITS 순) → 투자 먼저 → 숫자 오름차순 */

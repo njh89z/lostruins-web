@@ -6,7 +6,7 @@ import { render } from './ui/render.js';
 
 const root = document.getElementById('app');
 
-const store = createStore(initialAppState());
+const store = createStore(initialAppState('normal', true)); // 첫 실행: 난이도 선택 모달
 const viewModel = createViewModel(store);
 
 // 상태 변화 시 재렌더(단방향 흐름)

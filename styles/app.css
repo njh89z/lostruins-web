@@ -86,44 +86,71 @@ body {
   transform: translateY(1px);
 }
 
-/* ── 난이도 선택 줄 ── */
-.difficulty-row {
+/* ── 난이도 선택 모달 ── */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #0b0906d6;
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+.modal__panel {
+  width: min(360px, 100%);
+  background: var(--panel);
+  border-radius: var(--radius-panel);
+  padding: 22px 18px;
+  box-shadow: var(--shadow-panel);
+  border-top: 6px solid var(--gold);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
-  justify-content: center;
 }
-.difficulty-row__label {
-  font-size: 0.8rem;
-  color: var(--muted);
-  letter-spacing: 0.02em;
+.modal__title {
+  font-family: var(--font-title);
+  text-align: center;
+  margin: 0;
+  color: var(--gold);
+  font-size: 1.4rem;
+  letter-spacing: 0.06em;
 }
-.difficulty {
-  display: inline-flex;
-  flex: 1;
-  max-width: 280px;
-  border: 1px solid var(--gold-dim);
-  border-radius: 999px;
-  overflow: hidden;
-  background: var(--panel-2);
-}
-.difficulty__opt {
-  font-family: var(--font-body);
+.modal__sub {
+  text-align: center;
+  margin: 0 0 6px;
   font-size: 0.82rem;
-  flex: 1;
-  padding: 9px 12px;
-  border: none;
-  background: transparent;
+  color: var(--muted);
+}
+.diff-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--gold-dim);
+  background: var(--panel-2);
   color: var(--text);
   cursor: pointer;
 }
-.difficulty__opt + .difficulty__opt {
-  border-left: 1px solid #ffffff14;
+.diff-card:active {
+  transform: translateY(1px);
 }
-.difficulty__opt.is-active {
-  background: var(--gold);
-  color: #1a1408;
-  font-weight: 700;
+.diff-card.is-current {
+  border-color: var(--gold);
+  box-shadow: var(--glow-gold);
+}
+.diff-card__name {
+  font-family: var(--font-title);
+  font-size: 1.1rem;
+  color: var(--gold);
+}
+.diff-card__desc {
+  font-size: 0.78rem;
+  color: var(--muted);
 }
 
 /* ── 탐험 열(요약/풀) ── */

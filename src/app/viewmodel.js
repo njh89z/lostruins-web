@@ -16,8 +16,8 @@ function freshSeed() {
 /** 유효 난이도 목록 */
 export const DIFFICULTIES = ['easy', 'normal', 'hard'];
 
-/** 초기 앱 상태 (난이도 유지 가능) */
-export function initialAppState(difficulty = 'normal') {
+/** 초기 앱 상태 (난이도 유지 + 시작 모달 표시 여부) */
+export function initialAppState(difficulty = 'normal', showStartModal = false) {
   return {
     game: newGame(freshSeed()),
     ui: {
@@ -26,6 +26,7 @@ export function initialAppState(difficulty = 'normal') {
       message: '내 차례 — 카드를 선택하세요',
       lastAction: null, // {by, type, suit, cardId} 애니메이션 힌트
       difficulty, // 'easy' | 'normal' | 'hard'
+      showStartModal, // 난이도 선택 모달
     },
   };
 }
@@ -96,16 +97,24 @@ export function createViewModel(store) {
     const { game, ui } = store.getState();
 
     switch (intent.type) {
-      case 'newGame':
-        store.setState(initialAppState(ui.difficulty)); // 난이도 유지
+      case 'openStartModal':
+        update(null, { showStartModal: true, selectedCardId: null });
         return;
 
-      case 'setDifficulty': {
-        if (!DIFFICULTIES.includes(intent.level)) return;
-        // 다음 판부터 적용 + 새 게임 시작(난이도는 판 도중 바뀌면 혼란)
-        store.setState(initialAppState(intent.level));
+      case 'closeStartModal':
+        update(null, { showStartModal: false });
+        return;
+
+      case 'startGame': {
+        // 모달에서 난이도 선택 → 그 난이도로 새 판 시작
+        const level = DIFFICULTIES.includes(intent.level) ? intent.level : ui.difficulty;
+        store.setState(initialAppState(level, false));
         return;
       }
+
+      case 'newGame':
+        store.setState(initialAppState(ui.difficulty)); // 난이도 유지(즉시 새 판)
+        return;
 
       case 'selectCard': {
         if (game.turn !== 'human' || game.phase !== 'play') return;
