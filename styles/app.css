@@ -507,21 +507,47 @@ body {
   }
 }
 
-/* 가로뷰(가로 ≥ 세로): 데스크가 좁은 높이에 들어가도록 살짝 압축 */
+/* 가로뷰(가로 ≥ 세로): 낮은 높이에 전부 들어가도록 폭은 더 쓰고 세로는 압축 */
 @media (min-aspect-ratio: 1 / 1) {
-  .hand {
-    padding: 6px 8px;
+  .app {
+    max-width: 680px; /* 가로 공간 활용(중앙 정렬) */
+    padding: 6px 14px calc(6px + env(safe-area-inset-bottom));
+    gap: 4px;
+  }
+  .topbar__logo {
+    font-size: 1rem;
+  }
+  .message {
+    font-size: 0.74rem;
+    min-height: 0;
+  }
+  .desk {
+    gap: 4px;
+    --deck-w: 38px;
+  }
+  .center {
+    padding: 4px;
+  }
+  .deck__card {
+    width: 30px;
+    height: 42px;
+  }
+  .deck__count {
+    font-size: 0.56rem;
   }
   .stack .card,
   .pivot {
-    max-width: 42px;
+    max-width: 40px;
   }
   .stack .card:not(:first-child) {
-    margin-top: -42px;
+    margin-top: -40px;
   }
-  .deck__card {
-    width: 34px;
-    height: 46px;
+  /* 손패: 한 줄, 카드 살짝 작게 */
+  .hand {
+    padding: 5px 8px;
+  }
+  .hand__cards .card {
+    max-width: 46px;
   }
 }
 
