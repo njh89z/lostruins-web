@@ -25,6 +25,7 @@ export function render(root, appState, dispatch) {
   root.append(
     el('header', { className: 'topbar' }, [
       el('h1', { className: 'topbar__logo', text: 'LOSTRUINS' }),
+      difficultyControl(ui.difficulty, dispatch),
       el('button', {
         className: 'btn btn--ghost',
         text: '새 게임',
@@ -158,6 +159,27 @@ function resultOverlay(game, dispatch) {
   const overlay = el('div', { className: 'result' }, [panel]);
   overlayIn(panel);
   return overlay;
+}
+
+const DIFFICULTY_LABELS = { easy: '쉬움', normal: '보통', hard: '어려움' };
+
+/** 난이도 선택 세그먼트(바꾸면 새 판으로 시작) */
+function difficultyControl(current, dispatch) {
+  const wrap = el('div', { className: 'difficulty', attrs: { role: 'group', 'aria-label': '난이도' } });
+  for (const level of ['easy', 'normal', 'hard']) {
+    wrap.append(
+      el('button', {
+        className: `difficulty__opt${current === level ? ' is-active' : ''}`,
+        text: DIFFICULTY_LABELS[level],
+        attrs: { type: 'button' },
+        onClick: () => {
+          if (level === current) return;
+          dispatch({ type: 'setDifficulty', level });
+        },
+      }),
+    );
+  }
+  return wrap;
 }
 
 /** 손패 정렬: 색(SUITS 순) → 투자 먼저 → 숫자 오름차순 */

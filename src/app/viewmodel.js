@@ -13,8 +13,11 @@ function freshSeed() {
   return (Math.random() * 0xffffffff) >>> 0;
 }
 
-/** 초기 앱 상태 */
-export function initialAppState() {
+/** 유효 난이도 목록 */
+export const DIFFICULTIES = ['easy', 'normal', 'hard'];
+
+/** 초기 앱 상태 (난이도 유지 가능) */
+export function initialAppState(difficulty = 'normal') {
   return {
     game: newGame(freshSeed()),
     ui: {
@@ -22,6 +25,7 @@ export function initialAppState() {
       aiThinking: false,
       message: '내 차례 — 카드를 선택하세요',
       lastAction: null, // {by, type, suit, cardId} 애니메이션 힌트
+      difficulty, // 'easy' | 'normal' | 'hard'
     },
   };
 }
@@ -62,9 +66,9 @@ export function createViewModel(store) {
   }
 
   function runAiPlay() {
-    const { game } = store.getState();
+    const { game, ui } = store.getState();
     if (game.turn !== 'ai' || game.phase !== 'play') return;
-    const move = chooseMove(game);
+    const move = chooseMove(game, ui.difficulty);
     const next =
       move.type === 'play' ? applyPlay(game, move.cardId) : applyDiscard(game, move.cardId);
     update(() => next, {
@@ -75,9 +79,9 @@ export function createViewModel(store) {
   }
 
   function runAiDraw() {
-    const { game } = store.getState();
+    const { game, ui } = store.getState();
     if (game.turn !== 'ai' || game.phase !== 'draw') return;
-    const move = chooseMove(game);
+    const move = chooseMove(game, ui.difficulty);
     const next = applyDraw(game, move);
     update(() => next, {
       lastAction: { by: 'ai', type: 'draw', from: move.from, suit: move.suit },
@@ -93,8 +97,15 @@ export function createViewModel(store) {
 
     switch (intent.type) {
       case 'newGame':
-        store.setState(initialAppState());
+        store.setState(initialAppState(ui.difficulty)); // 난이도 유지
         return;
+
+      case 'setDifficulty': {
+        if (!DIFFICULTIES.includes(intent.level)) return;
+        // 다음 판부터 적용 + 새 게임 시작(난이도는 판 도중 바뀌면 혼란)
+        store.setState(initialAppState(intent.level));
+        return;
+      }
 
       case 'selectCard': {
         if (game.turn !== 'human' || game.phase !== 'play') return;

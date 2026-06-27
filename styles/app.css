@@ -31,6 +31,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .topbar__logo {
   font-family: var(--font-title);
@@ -82,6 +84,33 @@ body {
 }
 .btn:active {
   transform: translateY(1px);
+}
+
+/* ── 난이도 세그먼트 ── */
+.difficulty {
+  display: inline-flex;
+  border: 1px solid var(--gold-dim);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--panel-2);
+  margin-left: auto;
+}
+.difficulty__opt {
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  padding: 7px 12px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.difficulty__opt + .difficulty__opt {
+  border-left: 1px solid #ffffff14;
+}
+.difficulty__opt.is-active {
+  background: var(--gold);
+  color: #1a1408;
+  font-weight: 700;
 }
 
 /* ── 탐험 열(요약/풀) ── */

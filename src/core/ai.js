@@ -1,25 +1,20 @@
-// core/ai.js — 결정적 휴리스틱 AI (순수, 상태만으로 결정 / ADR-010)
-// 발상은 구버전 playAI2 계승(기술상세 §4.1): 유적별 cnt/sum/diff 집계 →
-// "유망한 1~2색을 정해 보존·착수하고, 착수한 색은 낮은 카드부터 매 턴 키운다".
-// 손실 회피(약한 색 착수·약한 색 투자 회피)가 핵심.
+// core/ai.js — 난이도별 결정적 AI (순수, 상태만으로 결정 / ADR-010).
+//   easy   : 약한 휴리스틱(약한 색 남발 + 막판 규율 없음)
+//   normal : 아레나 진화로 튜닝한 챔피언 휴리스틱(원본 대비 +58%)
+//   hard   : normal 휴리스틱 + 공정한 결정적 롤아웃 탐색(미지 카드를 시드로 재배치)
+// 모두 결정적(난수는 셔플/롤아웃 재배치의 시드 PRNG뿐, ADR-011).
 
-import { SUITS } from './cards.js';
-import { canPlay, topNumber, hasNumber } from './rules.js';
+import { SUITS, buildDeck, mulberry32 } from './cards.js';
+import { canPlay, topNumber, hasNumber, scorePlayer } from './rules.js';
+import { applyPlay, applyDiscard, applyDraw } from './game.js';
 
-// 착수 문턱(아레나 진화 튜닝: scripts/arena.mjs). 직전 세대 AI와의 헤드-투-헤드에서
-// 미사용 시드 2000판 기준 56% 승·평균 +2.2점/판으로 검증된 값.
-// 너무 낮으면 약한 색에 -20을 남발하고, 너무 높으면 소극적이 된다.
-/** 잠재 합이 이만큼이면 착수(전개 카드 2장 이상). */
-const COMMIT_MIN_SUM = 21;
-/** 카드가 3장 이상 모인 색은 다소 낮은 합에서도 착수(전개할 시간이 충분). */
-const COMMIT_MIN_SUM_3 = 17;
-/** 카드가 4장 이상이면 합이 더 낮아도 착수(폭으로 8장 보너스·합 확보). */
-const COMMIT_MIN_SUM_4 = 17;
-/** 투자 카드를 걸/쌓을 만큼 분명히 강한 색의 잠재 합. */
-const WAGER_MIN_SUM = 34;
-// 막판 착수 억제: 남은 덱이 적으면 새 -20을 회수할 시간이 없다.
-/** 남은 덱이 이 미만이면 '막판'으로 보고 신규 착수를 하지 않는다(아레나 검증값). */
-const LATE_DECK = 8;
+// ── 난이도별 휴리스틱 설정 ───────────────────────────────
+// m2/m3/m4: 전개 카드 2/3/4장일 때의 신규 착수 최소 잠재합. wager: 투자 베팅 문턱.
+// lateDeck: 남은 덱이 이 미만이면 신규 착수 금지(0=막판 규율 없음).
+const NORMAL = { m2: 21, m3: 17, m4: 17, wager: 34, lateDeck: 8 };
+const EASY = { m2: 15, m3: 13, m4: 12, wager: 28, lateDeck: 0 };
+/** hard 롤아웃 표본 수(클수록 강하고 느림). 아레나 검증: K=40 → normal 대비 ~56%. */
+const HARD_K = 40;
 
 function sumNumbers(cards) {
   let s = 0;
@@ -27,60 +22,51 @@ function sumNumbers(cards) {
   return s;
 }
 
-/**
- * 한 색의 현재 포지션 + 손패 잠재를 요약.
- * @param {PlayerState} ps
- * @param {string} suit
- */
 function suitInfo(ps, suit) {
   const exp = ps.expeditions[suit];
   const top = topNumber(exp);
-  const committed = exp.length > 0;
-  const hasNum = hasNumber(exp);
-  const expSum = sumNumbers(exp);
-  // 아직 합법적으로 낼 수 있는 손패 숫자(오름차순 보장 위해 value>top), 낮은 값부터
   const playableHeld = ps.hand
     .filter((c) => c.suit === suit && c.kind === 'number' && c.value > top)
     .sort((a, b) => a.value - b.value);
-  const heldNumbers = ps.hand.filter((c) => c.suit === suit && c.kind === 'number');
   const heldWagers = ps.hand.filter((c) => c.suit === suit && c.kind === 'wager');
-  // 잠재 합 = 이미 낸 숫자 + 앞으로 낼 수 있는 손패 숫자
-  const strength = expSum + sumNumbers(playableHeld);
-  return { exp, top, committed, hasNum, expSum, playableHeld, heldNumbers, heldWagers, strength };
+  return {
+    exp,
+    top,
+    committed: exp.length > 0,
+    hasNum: hasNumber(exp),
+    expSum: sumNumbers(exp),
+    playableHeld,
+    heldWagers,
+    strength: sumNumbers(exp) + sumNumbers(playableHeld),
+  };
 }
 
 /** 신규 착수할 만큼 유망한 색인가(자살 착수 회피 + 막판 억제) */
-function isTarget(info, deckLen) {
-  let ok =
-    (info.strength >= COMMIT_MIN_SUM && info.playableHeld.length >= 2) ||
-    (info.playableHeld.length >= 3 && info.strength >= COMMIT_MIN_SUM_3) ||
-    (info.playableHeld.length >= 4 && info.strength >= COMMIT_MIN_SUM_4);
+function isTarget(info, deckLen, cfg) {
+  const ok =
+    (info.strength >= cfg.m2 && info.playableHeld.length >= 2) ||
+    (info.playableHeld.length >= 3 && info.strength >= cfg.m3) ||
+    (info.playableHeld.length >= 4 && info.strength >= cfg.m4);
   if (!ok) return false;
-  // 막판: 회수할 턴이 부족하므로 신규 착수를 하지 않는다(이미 착수한 색은 계속 키움)
-  if (deckLen < LATE_DECK) return false;
+  if (cfg.lateDeck > 0 && deckLen < cfg.lateDeck) return false; // 막판: 신규 착수 금지
   return true;
 }
 
-/**
- * play 단계 결정.
- *  1) 이미 착수한 색이 있으면 — 그 색을 낮은 카드부터 키운다(카드 수·합·8장 보너스 극대화).
- *  2) 아니면 가장 강한 미착수 유망색에 착수(강하면 투자 먼저, 아니면 가장 낮은 숫자).
- *  3) 둘 다 없으면 가장 쓸모없는 카드를 버린다.
- */
-export function choosePlay(state) {
+/** play 단계 휴리스틱 결정 */
+export function choosePlay(state, cfg = NORMAL) {
   const ps = state.players[state.turn];
   const deckLen = state.deck.length;
 
-  // 1) 착수한 탐험 키우기 (가장 많이 투자한 색 우선)
+  // 1) 착수한 탐험 키우기 (가장 많이 투자한 색 우선, 낮은 카드부터)
   let advance = null;
   for (const suit of SUITS) {
     const info = suitInfo(ps, suit);
     if (!info.committed) continue;
     let card = null;
-    if (!info.hasNum && info.heldWagers.length > 0 && info.strength >= WAGER_MIN_SUM) {
-      card = info.heldWagers[0]; // 숫자 내기 전 + 강한 색이면 투자 카드를 더 쌓는다
+    if (!info.hasNum && info.heldWagers.length > 0 && info.strength >= cfg.wager) {
+      card = info.heldWagers[0];
     } else if (info.playableHeld.length > 0) {
-      card = info.playableHeld[0]; // 낮은 숫자부터(잠금 회피)
+      card = info.playableHeld[0];
     }
     if (card && (advance === null || info.expSum > advance.expSum)) {
       advance = { card, expSum: info.expSum };
@@ -92,38 +78,32 @@ export function choosePlay(state) {
   let commit = null;
   for (const suit of SUITS) {
     const info = suitInfo(ps, suit);
-    if (info.committed || !isTarget(info, deckLen)) continue;
-    if (commit === null || info.strength > commit.info.strength) commit = { info };
+    if (info.committed || !isTarget(info, deckLen, cfg)) continue;
+    if (commit === null || info.strength > commit.strength) commit = info;
   }
   if (commit) {
-    const info = commit.info;
-    if (info.heldWagers.length > 0 && info.strength >= WAGER_MIN_SUM) {
-      return { type: 'play', cardId: info.heldWagers[0].id, suit: info.heldWagers[0].suit };
+    if (commit.heldWagers.length > 0 && commit.strength >= cfg.wager) {
+      return { type: 'play', cardId: commit.heldWagers[0].id, suit: commit.heldWagers[0].suit };
     }
-    const card = info.playableHeld[0];
+    const card = commit.playableHeld[0];
     return { type: 'play', cardId: card.id, suit: card.suit };
   }
 
   // 3) 버리기
-  return { type: 'discard', cardId: chooseDiscardCard(ps, deckLen).id };
+  return { type: 'discard', cardId: chooseDiscardCard(ps, deckLen, cfg).id };
 }
 
-/** 버릴 카드 선택: 착수·유망색 카드는 보존, 나머지 중 낮은 숫자(상대에게 덜 이로움) 우선 */
-function chooseDiscardCard(ps, deckLen) {
+/** 버릴 카드 선택: 착수·유망색 카드는 보존, 나머지 중 낮은 숫자 우선 */
+function chooseDiscardCard(ps, deckLen, cfg) {
   let bestCard = ps.hand[0];
   let bestRank = -Infinity;
   for (const c of ps.hand) {
     const info = suitInfo(ps, c.suit);
     let rank;
-    if (info.committed && canPlay(info.exp, c)) {
-      rank = -1000; // 착수한 탐험에 낼 카드 — 반드시 보존
-    } else if (!info.committed && isTarget(info, deckLen) && canPlay(info.exp, c)) {
-      rank = -500; // 유망한 신규 탐험 후보 — 보존
-    } else if (c.kind === 'wager') {
-      rank = 60; // 죽은 색의 투자 카드 — 순수 낭비, 가장 먼저 버림
-    } else {
-      rank = 20 - c.value; // 낮은 숫자일수록 버리기 안전
-    }
+    if (info.committed && canPlay(info.exp, c)) rank = -1000;
+    else if (!info.committed && isTarget(info, deckLen, cfg) && canPlay(info.exp, c)) rank = -500;
+    else if (c.kind === 'wager') rank = 60;
+    else rank = 20 - c.value;
     if (rank > bestRank) {
       bestRank = rank;
       bestCard = c;
@@ -132,8 +112,8 @@ function chooseDiscardCard(ps, deckLen) {
   return bestCard;
 }
 
-/** draw 단계 결정: 착수·유망색에 즉시 유효한 버림 더미 카드 우선, 아니면 덱 */
-export function chooseDraw(state) {
+/** draw 단계 휴리스틱 결정 */
+export function chooseDraw(state, cfg = NORMAL) {
   const ps = state.players[state.turn];
   let pick = null;
   let pickScore = 0;
@@ -143,7 +123,7 @@ export function chooseDraw(state) {
     const top = pile[pile.length - 1];
     const info = suitInfo(ps, suit);
     if (!canPlay(info.exp, top)) continue;
-    if (!(info.committed || isTarget(info, state.deck.length))) continue;
+    if (!(info.committed || isTarget(info, state.deck.length, cfg))) continue;
     const wagersOn = info.exp.filter((c) => c.kind === 'wager').length;
     const s = top.kind === 'number' ? top.value * (1 + wagersOn) : 2;
     if (s > pickScore) {
@@ -153,14 +133,108 @@ export function chooseDraw(state) {
   }
   if (pick) return { type: 'draw', from: 'discard', suit: pick };
   if (state.deck.length > 0) return { type: 'draw', from: 'deck' };
-  // 덱 소진 폴백(정상 흐름에선 도달하지 않음)
   for (const suit of SUITS) {
     if (state.discards[suit].length > 0) return { type: 'draw', from: 'discard', suit };
   }
   return { type: 'draw', from: 'deck' };
 }
 
-/** 현재 단계에 맞는 AI 행동을 반환 */
-export function chooseMove(state) {
-  return state.phase === 'play' ? choosePlay(state) : chooseDraw(state);
+/** 한 설정(cfg)의 휴리스틱 행동 */
+function heuristicMove(state, cfg) {
+  return state.phase === 'play' ? choosePlay(state, cfg) : chooseDraw(state, cfg);
+}
+
+// ── hard: 공정한 결정적 롤아웃 탐색 ──────────────────────
+const apply = (g, m) =>
+  m.type === 'play' ? applyPlay(g, m.cardId) : m.type === 'discard' ? applyDiscard(g, m.cardId) : applyDraw(g, m);
+
+/** 상태에서 안정적 해시(결정적 시드용) — 내 손패/공개정보만 사용(미래 미참조) */
+function hashState(state, who) {
+  let h = 2166136261 >>> 0;
+  const fold = (s) => {
+    for (let i = 0; i < s.length; i += 1) h = Math.imul(h ^ s.charCodeAt(i), 16777619) >>> 0;
+  };
+  for (const c of state.players[who].hand) fold(c.id);
+  for (const suit of SUITS) {
+    fold('D' + suit + state.discards[suit].length);
+    fold('E' + state.players[who].expeditions[suit].length);
+  }
+  fold('k' + state.deck.length);
+  return h >>> 0;
+}
+
+/** 미지 카드(상대 손패·덱)를 시드로 재배치한 가상 상태(공정: 실제 덱/상대패 미참조) */
+function determinize(state, who, seed) {
+  const opp = who === 'human' ? 'ai' : 'human';
+  const seen = new Set();
+  for (const c of state.players[who].hand) seen.add(c.id);
+  for (const p of [state.players.human, state.players.ai]) {
+    for (const suit of SUITS) for (const c of p.expeditions[suit]) seen.add(c.id);
+  }
+  for (const suit of SUITS) for (const c of state.discards[suit]) seen.add(c.id);
+
+  const pool = buildDeck().filter((c) => !seen.has(c.id));
+  const rng = mulberry32(seed);
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    const t = pool[i];
+    pool[i] = pool[j];
+    pool[j] = t;
+  }
+  const oppHandSize = state.players[opp].hand.length;
+  return {
+    ...state,
+    deck: pool.slice(oppHandSize),
+    players: { ...state.players, [opp]: { ...state.players[opp], hand: pool.slice(0, oppHandSize) } },
+  };
+}
+
+/** det 상태를 종료까지 normal 휴리스틱으로 진행 → who의 점수 마진 */
+function rolloutMargin(detState, who) {
+  let g = detState;
+  let guard = 0;
+  while (g.status === 'playing' && guard < 2000) {
+    g = apply(g, heuristicMove(g, NORMAL));
+    guard += 1;
+  }
+  return scorePlayer(g.players[who]).total - scorePlayer(g.players[who === 'human' ? 'ai' : 'human']).total;
+}
+
+/** hard 행동: play 단계는 후보 수들을 K회 결정적 롤아웃으로 평가, draw는 휴리스틱 */
+function chooseHard(state, K) {
+  if (state.phase !== 'play') return heuristicMove(state, NORMAL);
+  const who = state.turn;
+  const ps = state.players[who];
+
+  const cands = [];
+  for (const c of ps.hand) if (canPlay(ps.expeditions[c.suit], c)) cands.push({ type: 'play', cardId: c.id, suit: c.suit });
+  const heur = heuristicMove(state, NORMAL); // 휴리스틱의 한 수(특히 버리기)도 후보에 포함
+  if (heur.type === 'discard' || !cands.some((m) => m.cardId === heur.cardId)) cands.push(heur);
+  if (cands.length === 1) return cands[0];
+
+  const base = hashState(state, who);
+  let best = null;
+  for (const a of cands) {
+    let total = 0;
+    for (let k = 0; k < K; k += 1) {
+      const det = determinize(state, who, (base + k * 2654435761) >>> 0);
+      let g = apply(det, a);
+      if (g.status === 'playing' && g.phase === 'draw') g = apply(g, heuristicMove(g, NORMAL));
+      total += rolloutMargin(g, who);
+    }
+    const avg = total / K;
+    if (best === null || avg > best.avg) best = { a, avg };
+  }
+  return best.a;
+}
+
+/**
+ * 현재 단계·난이도에 맞는 AI 행동을 반환.
+ * @param {GameState} state
+ * @param {'easy'|'normal'|'hard'} [level]
+ */
+export function chooseMove(state, level = 'normal') {
+  if (level === 'easy') return heuristicMove(state, EASY);
+  if (level === 'hard') return chooseHard(state, HARD_K);
+  return heuristicMove(state, NORMAL);
 }
