@@ -381,14 +381,14 @@ body {
 }
 .hand__cards {
   display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: thin;
+  gap: 4px;
+  justify-content: center;
 }
 .hand__cards .card {
-  flex: 0 0 56px;
-  width: 56px;
+  /* 손패(최대 8장)가 가로 스크롤 없이 한 줄에 들어가도록 균등 분배 */
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 60px;
 }
 .hand__hint {
   margin: 8px 2px 0;
@@ -483,11 +483,16 @@ body {
 
 /* 아주 작은 폰 보정 */
 @media (max-width: 340px) {
-  .hand__cards .card {
-    flex-basis: 48px;
-    width: 48px;
-  }
   .card__emoji {
     font-size: 1.2rem;
   }
+}
+
+/* ── 마지막 카드 강조(상대/나의 마지막 수 + 내가 마지막에 뽑은 카드) ── */
+.card.is-last {
+  box-shadow: 0 0 0 2px var(--gold), 0 0 12px rgba(200, 162, 75, 0.6);
+  z-index: 1;
+}
+.chip.is-last {
+  box-shadow: 0 0 0 2px var(--gold);
 }

@@ -82,7 +82,7 @@ export function expeditionColumnEl(suit, cards, opts = {}) {
     stack.append(
       el('span', {
         className: `chip chip--${c.kind}`,
-        dataset: { suit },
+        dataset: { suit, cardId: c.id },
         text: c.kind === 'wager' ? '⟡' : String(c.value),
       }),
     );

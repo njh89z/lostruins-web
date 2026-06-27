@@ -25,6 +25,9 @@ export function initialAppState(difficulty = 'normal', showStartModal = false) {
       aiThinking: false,
       message: '내 차례 — 카드를 선택하세요',
       lastAction: null, // {by, type, suit, cardId} 애니메이션 힌트
+      lastHuman: null, // 내가 마지막에 처리한(낸/버린) 카드 id — 하이라이트
+      lastAi: null, // 상대가 마지막에 처리한 카드 id — 하이라이트
+      lastDrawnHuman: null, // 내가 마지막에 뽑아온 카드 id — 하이라이트
       difficulty, // 'easy' | 'normal' | 'hard'
       showStartModal, // 난이도 선택 모달
     },
@@ -74,6 +77,7 @@ export function createViewModel(store) {
       move.type === 'play' ? applyPlay(game, move.cardId) : applyDiscard(game, move.cardId);
     update(() => next, {
       lastAction: { by: 'ai', type: move.type, suit: next.pending?.suit, cardId: move.cardId },
+      lastAi: move.cardId,
       message: move.type === 'play' ? '상대가 탐험에 카드를 냈습니다' : '상대가 카드를 버렸습니다',
     });
     setTimeout(runAiDraw, AI_DRAW_DELAY);
@@ -129,6 +133,7 @@ export function createViewModel(store) {
         update(() => next, {
           selectedCardId: null,
           lastAction: { by: 'human', type: 'play', suit: next.pending?.suit, cardId: intent.cardId },
+          lastHuman: intent.cardId,
           message: humanMessage(next),
         });
         return;
@@ -140,6 +145,7 @@ export function createViewModel(store) {
         update(() => next, {
           selectedCardId: null,
           lastAction: { by: 'human', type: 'discard', suit: next.pending?.suit, cardId: intent.cardId },
+          lastHuman: intent.cardId,
           message: humanMessage(next),
         });
         return;
@@ -150,6 +156,7 @@ export function createViewModel(store) {
         const next = applyDraw(game, { from: 'deck' });
         update(() => next, {
           lastAction: { by: 'human', type: 'draw', from: 'deck' },
+          lastDrawnHuman: next.pending?.card?.id ?? null,
           message: humanMessage(next),
         });
         maybeRunAi();
@@ -162,6 +169,7 @@ export function createViewModel(store) {
         const next = applyDraw(game, { from: 'discard', suit: intent.suit });
         update(() => next, {
           lastAction: { by: 'human', type: 'draw', from: 'discard', suit: intent.suit },
+          lastDrawnHuman: next.pending?.card?.id ?? null,
           message: humanMessage(next),
         });
         maybeRunAi();

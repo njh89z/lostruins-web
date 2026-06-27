@@ -126,9 +126,15 @@ export function render(root, appState, dispatch) {
   // 손패 등장 애니메이션(턴 시작 느낌)
   animate.forEach((n, i) => dealIn(n, i * 18));
 
-  // 방금 행동 강조
+  // 마지막 카드 강조: 상대/내가 마지막에 처리한 카드 + 내가 마지막에 뽑은 카드
+  for (const id of [ui.lastHuman, ui.lastAi, ui.lastDrawnHuman]) {
+    if (!id) continue;
+    const target = root.querySelector(`[data-card-id="${CSS.escape(id)}"]`);
+    if (target) target.classList.add('is-last');
+  }
+  // 방금 일어난 행동은 한 번 반짝
   if (ui.lastAction?.cardId) {
-    const target = root.querySelector(`[data-card-id="${ui.lastAction.cardId}"]`);
+    const target = root.querySelector(`[data-card-id="${CSS.escape(ui.lastAction.cardId)}"]`);
     if (target) pulse(target);
   }
 
