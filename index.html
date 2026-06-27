@@ -1,30 +1,37 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>LostRuins</title>
-<style>
-  :root { --bg:#15120E; --panel:#211C16; --gold:#C8A24B; --text:#EDE6D6; --muted:#9A8E78; }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  html,body { height:100%; }
-  body {
-    background: radial-gradient(120% 90% at 50% 0%, #221b13 0%, var(--bg) 60%);
-    color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    min-height:100svh; text-align:center; padding:24px; gap:14px;
-  }
-  .logo { font-size:13vw; max-font-size:64px; letter-spacing:.04em; color:var(--gold);
-    font-weight:800; text-shadow:0 2px 18px rgba(200,162,75,.25); }
-  @media(min-width:520px){ .logo{ font-size:64px; } }
-  .tag { color:var(--muted); font-size:15px; line-height:1.6; }
-  .badge { margin-top:8px; border:1px solid rgba(200,162,75,.4); color:var(--gold);
-    border-radius:999px; padding:7px 16px; font-size:13px; }
-</style>
-</head>
-<body>
-  <div class="logo">LostRuins</div>
-  <div class="tag">잃어버린 유적으로 떠나는 1인 탐험 카드게임</div>
-  <div class="badge">🚧 준비 중 — 배포 파이프라인 점검용 플레이스홀더</div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>LostRuins — 탐험 카드게임</title>
+    <meta name="description" content="잃어버린 유적으로 탐험대를 보내 PC와 점수를 겨루는 1인용 카드게임." />
+
+    <!-- PWA -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="theme-color" content="#15120E" />
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./assets/icon.svg" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- 웹폰트(CDN, 서비스워커 런타임 캐시) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+    />
+
+    <link rel="stylesheet" href="./styles/tokens.css" />
+    <link rel="stylesheet" href="./styles/app.css" />
+  </head>
+  <body>
+    <main id="app" class="app"><!-- render.js가 채운다 --></main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
 </html>

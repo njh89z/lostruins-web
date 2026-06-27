@@ -1,0 +1,57 @@
+/* tokens.css — 디자인 토큰(단일 원천). 색·간격·radius·그림자는 여기서만 정의. */
+:root {
+  /* 표면 */
+  --bg: #15120e;
+  --panel: #211c16;
+  --panel-2: #2b251c;
+  --parchment: #eadfc8;
+
+  /* 강조·텍스트 */
+  --gold: #c8a24b;
+  --gold-dim: #8c7333;
+  --text: #ede6d6;
+  --muted: #9a8e78;
+
+  /* 유적 5색 */
+  --suit-desert: #e0a82e;
+  --suit-snow: #5ba3c7;
+  --suit-volcano: #d9534f;
+  --suit-jungle: #3e9d5a;
+  --suit-abyss: #3b5ba5;
+
+  /* 의미색 */
+  --pos: #5dba6f;
+  --neg: #d9534f;
+
+  /* 형태 */
+  --radius-card: 12px;
+  --radius-panel: 14px;
+  --gap: 8px;
+  --gap-lg: 14px;
+
+  /* 그림자 */
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.45);
+  --shadow-panel: 0 6px 22px rgba(0, 0, 0, 0.5);
+  --glow-gold: 0 0 0 2px var(--gold), 0 0 14px rgba(200, 162, 75, 0.45);
+
+  /* 폰트 */
+  --font-title: 'Cinzel', 'Pretendard', serif;
+  --font-body: 'Pretendard', system-ui, -apple-system, sans-serif;
+}
+
+/* 유적색 매핑(data-suit로 어디서나 참조) */
+[data-suit='desert'] {
+  --suit: var(--suit-desert);
+}
+[data-suit='snow'] {
+  --suit: var(--suit-snow);
+}
+[data-suit='volcano'] {
+  --suit: var(--suit-volcano);
+}
+[data-suit='jungle'] {
+  --suit: var(--suit-jungle);
+}
+[data-suit='abyss'] {
+  --suit: var(--suit-abyss);
+}

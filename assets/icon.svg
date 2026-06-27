@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#15120E"/>
+  <!-- maskable 안전 영역(중앙 80%) 안에 배치 -->
+  <g transform="translate(256 256)">
+    <!-- 골드 링 -->
+    <circle r="172" fill="none" stroke="#C8A24B" stroke-width="10" opacity="0.85"/>
+    <!-- 유적 5색 보석(탐험 5색) -->
+    <g>
+      <circle cx="0" cy="-150" r="20" fill="#E0A82E"/>
+      <circle cx="143" cy="-46" r="20" fill="#5BA3C7"/>
+      <circle cx="88" cy="121" r="20" fill="#D9534F"/>
+      <circle cx="-88" cy="121" r="20" fill="#3E9D5A"/>
+      <circle cx="-143" cy="-46" r="20" fill="#3B5BA5"/>
+    </g>
+    <!-- 중앙 다이아 문양(투자 카드 ⟡ 모티프) -->
+    <path d="M0 -96 L70 0 L0 96 L-70 0 Z" fill="#211C16" stroke="#C8A24B" stroke-width="8"/>
+    <path d="M0 -52 L40 0 L0 52 L-40 0 Z" fill="#C8A24B"/>
+  </g>
+</svg>
