@@ -6,16 +6,20 @@
 import { SUITS } from './cards.js';
 import { canPlay, topNumber, hasNumber } from './rules.js';
 
-// 착수 문턱(시뮬레이션 튜닝: 평균 +12, 착수 탐험의 ~75%가 흑자, 빈손 게임 0).
+// 착수 문턱(아레나 진화 튜닝: scripts/arena.mjs). 직전 세대 AI와의 헤드-투-헤드에서
+// 미사용 시드 2000판 기준 56% 승·평균 +2.2점/판으로 검증된 값.
 // 너무 낮으면 약한 색에 -20을 남발하고, 너무 높으면 소극적이 된다.
 /** 잠재 합이 이만큼이면 착수(전개 카드 2장 이상). */
 const COMMIT_MIN_SUM = 21;
 /** 카드가 3장 이상 모인 색은 다소 낮은 합에서도 착수(전개할 시간이 충분). */
-const COMMIT_MIN_SUM_3 = 19;
+const COMMIT_MIN_SUM_3 = 17;
 /** 카드가 4장 이상이면 합이 더 낮아도 착수(폭으로 8장 보너스·합 확보). */
 const COMMIT_MIN_SUM_4 = 17;
 /** 투자 카드를 걸/쌓을 만큼 분명히 강한 색의 잠재 합. */
 const WAGER_MIN_SUM = 34;
+// 막판 착수 억제: 남은 덱이 적으면 새 -20을 회수할 시간이 없다.
+/** 남은 덱이 이 미만이면 '막판'으로 보고 신규 착수를 하지 않는다(아레나 검증값). */
+const LATE_DECK = 8;
 
 function sumNumbers(cards) {
   let s = 0;
@@ -45,12 +49,16 @@ function suitInfo(ps, suit) {
   return { exp, top, committed, hasNum, expSum, playableHeld, heldNumbers, heldWagers, strength };
 }
 
-/** 신규 착수할 만큼 유망한 색인가(자살 착수 회피) */
-function isTarget(info) {
-  if (info.strength >= COMMIT_MIN_SUM && info.playableHeld.length >= 2) return true;
-  if (info.playableHeld.length >= 3 && info.strength >= COMMIT_MIN_SUM_3) return true;
-  if (info.playableHeld.length >= 4 && info.strength >= COMMIT_MIN_SUM_4) return true;
-  return false;
+/** 신규 착수할 만큼 유망한 색인가(자살 착수 회피 + 막판 억제) */
+function isTarget(info, deckLen) {
+  let ok =
+    (info.strength >= COMMIT_MIN_SUM && info.playableHeld.length >= 2) ||
+    (info.playableHeld.length >= 3 && info.strength >= COMMIT_MIN_SUM_3) ||
+    (info.playableHeld.length >= 4 && info.strength >= COMMIT_MIN_SUM_4);
+  if (!ok) return false;
+  // 막판: 회수할 턴이 부족하므로 신규 착수를 하지 않는다(이미 착수한 색은 계속 키움)
+  if (deckLen < LATE_DECK) return false;
+  return true;
 }
 
 /**
@@ -61,6 +69,7 @@ function isTarget(info) {
  */
 export function choosePlay(state) {
   const ps = state.players[state.turn];
+  const deckLen = state.deck.length;
 
   // 1) 착수한 탐험 키우기 (가장 많이 투자한 색 우선)
   let advance = null;
@@ -83,7 +92,7 @@ export function choosePlay(state) {
   let commit = null;
   for (const suit of SUITS) {
     const info = suitInfo(ps, suit);
-    if (info.committed || !isTarget(info)) continue;
+    if (info.committed || !isTarget(info, deckLen)) continue;
     if (commit === null || info.strength > commit.info.strength) commit = { info };
   }
   if (commit) {
@@ -96,11 +105,11 @@ export function choosePlay(state) {
   }
 
   // 3) 버리기
-  return { type: 'discard', cardId: chooseDiscardCard(ps).id };
+  return { type: 'discard', cardId: chooseDiscardCard(ps, deckLen).id };
 }
 
 /** 버릴 카드 선택: 착수·유망색 카드는 보존, 나머지 중 낮은 숫자(상대에게 덜 이로움) 우선 */
-function chooseDiscardCard(ps) {
+function chooseDiscardCard(ps, deckLen) {
   let bestCard = ps.hand[0];
   let bestRank = -Infinity;
   for (const c of ps.hand) {
@@ -108,7 +117,7 @@ function chooseDiscardCard(ps) {
     let rank;
     if (info.committed && canPlay(info.exp, c)) {
       rank = -1000; // 착수한 탐험에 낼 카드 — 반드시 보존
-    } else if (!info.committed && isTarget(info) && canPlay(info.exp, c)) {
+    } else if (!info.committed && isTarget(info, deckLen) && canPlay(info.exp, c)) {
       rank = -500; // 유망한 신규 탐험 후보 — 보존
     } else if (c.kind === 'wager') {
       rank = 60; // 죽은 색의 투자 카드 — 순수 낭비, 가장 먼저 버림
@@ -134,7 +143,7 @@ export function chooseDraw(state) {
     const top = pile[pile.length - 1];
     const info = suitInfo(ps, suit);
     if (!canPlay(info.exp, top)) continue;
-    if (!(info.committed || isTarget(info))) continue;
+    if (!(info.committed || isTarget(info, state.deck.length))) continue;
     const wagersOn = info.exp.filter((c) => c.kind === 'wager').length;
     const s = top.kind === 'number' ? top.value * (1 + wagersOn) : 2;
     if (s > pickScore) {
