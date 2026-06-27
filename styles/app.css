@@ -398,22 +398,14 @@ body {
 }
 .hand__cards {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 5px; /* 행 6px · 열 5px */
+  gap: 5px;
   justify-content: center;
 }
 .hand__cards .card {
-  /* 기본(가로가 더 넓은 화면): 한 줄 8장 (7칸 × 5px 간격) */
-  flex: 0 0 auto;
-  width: calc((100% - 35px) / 8);
+  /* 손패(최대 8장)를 가로 스크롤 없이 한 줄에 균등 배치 */
+  flex: 1 1 0;
+  min-width: 0;
   max-width: 60px;
-}
-/* 세로가 더 긴 화면(가로:세로 < 1): 두 줄 4장으로 — 카드를 크게 */
-@media (max-aspect-ratio: 1 / 1) {
-  .hand__cards .card {
-    width: calc((100% - 15px) / 4); /* 4장(3칸 × 5px) */
-    max-width: none;
-  }
 }
 .hand__hint {
   margin: 8px 2px 0;
