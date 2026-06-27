@@ -1,7 +1,7 @@
 // sw.js — 서비스워커. 앱 셸 precache(cache-first) + 폰트 런타임 캐시 (ADR-007).
 // 갱신 시 CACHE 버전을 올려 강제 교체할 것.
 
-const CACHE = 'lostruins-v4';
+const CACHE = 'lostruins-v5';
 
 /** precache 대상(상대경로 — Pages 루트 /lostruins-web/) */
 const APP_SHELL = [
@@ -41,20 +41,37 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+  const sameOrigin = new URL(request.url).origin === self.location.origin;
 
+  if (sameOrigin) {
+    // 앱 자산(HTML/JS/CSS): 네트워크 우선 → 배포 즉시 최신 반영, 실패 시 캐시(오프라인)
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request)),
+    );
+    return;
+  }
+
+  // cross-origin(폰트 등): 캐시 우선(런타임 캐시)
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
       return fetch(request)
         .then((response) => {
-          // 폰트 등 cross-origin 포함, 성공 응답은 런타임 캐시에 추가
           if (response && (response.ok || response.type === 'opaque')) {
             const copy = response.clone();
             caches.open(CACHE).then((cache) => cache.put(request, copy));
           }
           return response;
         })
-        .catch(() => cached); // 오프라인: 캐시에 없으면 실패
+        .catch(() => cached);
     }),
   );
 });

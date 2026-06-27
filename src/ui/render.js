@@ -25,7 +25,6 @@ export function render(root, appState, dispatch) {
   root.append(
     el('header', { className: 'topbar' }, [
       el('h1', { className: 'topbar__logo', text: 'LOSTRUINS' }),
-      difficultyControl(ui.difficulty, dispatch),
       el('button', {
         className: 'btn btn--ghost',
         text: '새 게임',
@@ -33,6 +32,7 @@ export function render(root, appState, dispatch) {
         onClick: () => dispatch({ type: 'newGame' }),
       }),
     ]),
+    difficultyControl(ui.difficulty, dispatch),
     el('p', { className: `message${ui.aiThinking ? ' is-thinking' : ''}`, text: ui.message }),
   );
 
@@ -163,11 +163,14 @@ function resultOverlay(game, dispatch) {
 
 const DIFFICULTY_LABELS = { easy: '쉬움', normal: '보통', hard: '어려움' };
 
-/** 난이도 선택 세그먼트(바꾸면 새 판으로 시작) */
+/** 난이도 선택 줄(라벨 + 세그먼트). 바꾸면 그 난이도로 새 판 시작 */
 function difficultyControl(current, dispatch) {
-  const wrap = el('div', { className: 'difficulty', attrs: { role: 'group', 'aria-label': '난이도' } });
+  const row = el('div', { className: 'difficulty-row' }, [
+    el('span', { className: 'difficulty-row__label', text: '난이도' }),
+  ]);
+  const seg = el('div', { className: 'difficulty', attrs: { role: 'group', 'aria-label': '난이도' } });
   for (const level of ['easy', 'normal', 'hard']) {
-    wrap.append(
+    seg.append(
       el('button', {
         className: `difficulty__opt${current === level ? ' is-active' : ''}`,
         text: DIFFICULTY_LABELS[level],
@@ -179,7 +182,8 @@ function difficultyControl(current, dispatch) {
       }),
     );
   }
-  return wrap;
+  row.append(seg);
+  return row;
 }
 
 /** 손패 정렬: 색(SUITS 순) → 투자 먼저 → 숫자 오름차순 */
