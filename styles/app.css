@@ -382,20 +382,19 @@ body {
 .hand__cards {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 4px; /* 행 6px · 열 4px */
+  gap: 6px 5px; /* 행 6px · 열 5px */
   justify-content: center;
 }
 .hand__cards .card {
-  /* 기본(넓은 화면): 한 줄 8장 (7칸 × 4px 간격) */
+  /* 기본(폰): 두 줄 4장 (3칸 × 5px 간격) — 카드를 크게 */
   flex: 0 0 auto;
-  width: calc((100% - 28px) / 8);
-  max-width: 60px;
+  width: calc((100% - 15px) / 4);
 }
-/* 폭이 좁고 세로로 긴 화면: 두 줄 4장으로 — 카드를 더 크게 */
-@media (max-width: 430px) and (orientation: portrait) {
+/* 넓은 화면(태블릿·데스크톱)에서만 한 줄 8장 */
+@media (min-width: 560px) {
   .hand__cards .card {
-    width: calc((100% - 12px) / 4); /* 4장(3칸 × 4px) */
-    max-width: none;
+    width: calc((100% - 35px) / 8); /* 8장(7칸 × 5px) */
+    max-width: 60px;
   }
 }
 .hand__hint {
