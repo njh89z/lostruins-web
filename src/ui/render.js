@@ -67,9 +67,9 @@ export function render(root, appState, dispatch) {
   for (const suit of SUITS) {
     const col = el('div', { className: 'col', dataset: { suit } });
 
-    // 상대 탐험(중앙에서 위로 쌓임)
+    // 상대 탐험(중앙에서 위로 쌓임) — 손패와 같은 카드 모양으로 겹쳐 쌓임
     const aiStack = el('div', { className: 'stack stack--ai' });
-    for (const c of ai.expeditions[suit]) aiStack.append(stackTile(c));
+    for (const c of ai.expeditions[suit]) aiStack.append(cardEl(c));
 
     // 버림 더미(중앙 축) — 뽑기/버리기 대상
     const pile = game.discards[suit];
@@ -88,7 +88,7 @@ export function render(root, appState, dispatch) {
         },
       },
       [
-        top ? stackTile(top) : el('span', { className: 'pivot__empty', text: SUIT_META[suit].emoji }),
+        top ? cardEl(top) : el('span', { className: 'pivot__empty', text: SUIT_META[suit].emoji }),
         pile.length > 1 ? el('span', { className: 'pivot__count', text: String(pile.length) }) : null,
       ],
     );
@@ -99,7 +99,7 @@ export function render(root, appState, dispatch) {
       className: `stack stack--me${canTarget ? ' is-target' : ''}`,
       onClick: canTarget ? () => dispatch({ type: 'playCard', cardId: selected.id, suit }) : undefined,
     });
-    for (const c of human.expeditions[suit]) meStack.append(stackTile(c));
+    for (const c of human.expeditions[suit]) meStack.append(cardEl(c));
     if (canTarget && human.expeditions[suit].length === 0) {
       meStack.append(el('span', { className: 'stack__hint', text: '여기' }));
     }
@@ -187,15 +187,6 @@ function resultOverlay(game, dispatch) {
   const overlay = el('div', { className: 'result' }, [panel]);
   overlayIn(panel);
   return overlay;
-}
-
-/** 탐험/버림에 쌓이는 작은 카드 타일(겹쳐 쌓임). 색은 data-suit로, id는 하이라이트용 */
-function stackTile(card) {
-  return el('span', {
-    className: `tile tile--${card.kind}`,
-    dataset: { suit: card.suit, cardId: card.id },
-    text: card.kind === 'wager' ? '⟡' : String(card.value),
-  });
 }
 
 const DIFFICULTY_LABELS = { easy: '쉬움', normal: '보통', hard: '어려움' };

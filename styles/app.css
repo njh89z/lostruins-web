@@ -207,8 +207,8 @@ body {
 .stack {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  min-height: 28px;
+  align-items: center;
+  min-height: 30px;
 }
 .stack--ai {
   flex: 1 1 0;
@@ -221,54 +221,40 @@ body {
 }
 .stack--me.is-target {
   outline: 2px dashed var(--gold);
-  outline-offset: 2px;
-  border-radius: 8px;
+  outline-offset: 3px;
+  border-radius: 10px;
   cursor: pointer;
 }
 .stack__hint {
   text-align: center;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--gold);
-  padding: 4px 0;
+  padding: 6px 0;
 }
 
-/* 겹쳐 쌓이는 카드 타일 */
-.tile {
-  height: 24px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-title);
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(150deg, color-mix(in srgb, var(--suit) 82%, #000), color-mix(in srgb, var(--suit) 45%, #000));
-  border: 1px solid #00000055;
-  box-shadow: 0 1px 2px #0007;
+/* 손패와 같은 카드 모양으로 겹쳐 쌓임(위 카드 숫자만 보이게) */
+.stack .card {
+  width: 100%;
+  max-width: 52px;
+  pointer-events: none; /* 탭은 레인(stack)이 받아 내기 처리 */
 }
-.tile--wager {
-  background: repeating-linear-gradient(
-    45deg,
-    color-mix(in srgb, var(--suit) 58%, #000) 0 5px,
-    color-mix(in srgb, var(--suit) 36%, #000) 5px 10px
-  );
-}
-.tile:not(:first-child) {
-  margin-top: -12px; /* 겹침 */
+.stack .card:not(:first-child) {
+  margin-top: -50px; /* 겹침 */
 }
 
-/* 버림 더미(중앙 축) */
+/* 버림 더미(중앙 축) — 예전처럼 카드 모양 더미 */
 .pivot {
   flex: 0 0 auto;
   position: relative;
-  min-height: 30px;
-  margin: 3px 0;
-  border-radius: 7px;
-  border: 1px dashed #ffffff26;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
+  max-width: 52px;
+  align-self: center;
+  margin: 4px auto;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-card);
+  border: 1px dashed #ffffff2e;
+  display: grid;
+  place-items: center;
 }
 .pivot.is-target {
   border-style: solid;
@@ -276,19 +262,20 @@ body {
   box-shadow: var(--glow-gold);
   cursor: pointer;
 }
-.pivot .tile {
+.pivot .card {
   width: 100%;
-  margin: 0;
+  height: 100%;
+  pointer-events: none;
 }
 .pivot__empty {
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   opacity: 0.4;
 }
 .pivot__count {
   position: absolute;
   right: 2px;
-  bottom: 1px;
-  font-size: 0.56rem;
+  bottom: 2px;
+  font-size: 0.58rem;
   background: #000000a8;
   color: var(--text);
   border-radius: 4px;
@@ -514,14 +501,12 @@ body {
   .hand {
     padding: 6px 8px;
   }
-  .tile {
-    height: 20px;
-  }
-  .tile:not(:first-child) {
-    margin-top: -11px;
-  }
+  .stack .card,
   .pivot {
-    min-height: 26px;
+    max-width: 42px;
+  }
+  .stack .card:not(:first-child) {
+    margin-top: -42px;
   }
   .deck__card {
     width: 34px;
@@ -532,10 +517,5 @@ body {
 /* ── 마지막 카드 강조(상대/나의 마지막 수 + 내가 마지막에 뽑은 카드) ── */
 .card.is-last {
   box-shadow: 0 0 0 2px var(--gold), 0 0 12px rgba(200, 162, 75, 0.6);
-  z-index: 1;
-}
-.tile.is-last {
-  position: relative;
-  z-index: 5;
-  box-shadow: 0 0 0 2px var(--gold), 0 1px 2px #0007;
+  z-index: 3;
 }
