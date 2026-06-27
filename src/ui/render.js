@@ -8,7 +8,11 @@ import { el, cardEl, scoreTableEl, SUIT_META } from './components.js';
 import { dealIn, pulse, overlayIn } from './animations.js';
 
 /** 빌드 버전(우하단 배지). 배포(sw 캐시)와 함께 올린다 — 갱신 확인용 */
-const BUILD = 'v22';
+const BUILD = 'v23';
+
+// 재렌더마다 깜빡이지 않도록: 직전 렌더 상태를 기억한다.
+let prevHandIds = new Set(); // 손패 등장 애니메이션은 '새로 들어온 카드'에만
+let lastPulsedAction = null; // 반짝임은 '실제 새 행동'에만(상대/내 수가 바뀔 때 1회)
 
 /**
  * @param {HTMLElement} root
@@ -132,9 +136,10 @@ export function render(root, appState, dispatch) {
       onClick: myTurn && game.phase === 'play' ? () => dispatch({ type: 'selectCard', cardId: c.id }) : undefined,
     });
     handInner.append(node);
-    animate.push(node);
+    if (!prevHandIds.has(c.id)) animate.push(node); // 새로 들어온 카드만 등장 애니메이션
   }
   handWrap.append(handInner);
+  prevHandIds = new Set(sorted.map((c) => c.id));
 
   // 행동 힌트
   if (selected) {
@@ -159,10 +164,13 @@ export function render(root, appState, dispatch) {
     const target = root.querySelector(`[data-card-id="${CSS.escape(id)}"]`);
     if (target) target.classList.add('is-last');
   }
-  // 방금 일어난 행동은 한 번 반짝
-  if (ui.lastAction?.cardId) {
-    const target = root.querySelector(`[data-card-id="${CSS.escape(ui.lastAction.cardId)}"]`);
-    if (target) pulse(target);
+  // 방금 '새로' 일어난 행동만 한 번 반짝(재렌더로 인한 중복 반짝임 방지)
+  if (ui.lastAction !== lastPulsedAction) {
+    lastPulsedAction = ui.lastAction;
+    if (ui.lastAction?.cardId) {
+      const target = root.querySelector(`[data-card-id="${CSS.escape(ui.lastAction.cardId)}"]`);
+      if (target) pulse(target);
+    }
   }
 
   // ── 결과 오버레이 ──────────────────────────────────────
