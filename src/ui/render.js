@@ -8,7 +8,7 @@ import { el, cardEl, scoreTableEl, SUIT_META } from './components.js';
 import { dealIn, pulse, overlayIn } from './animations.js';
 
 /** 빌드 버전(우하단 배지). 배포(sw 캐시)와 함께 올린다 — 갱신 확인용 */
-const BUILD = 'v17';
+const BUILD = 'v18';
 
 /**
  * @param {HTMLElement} root
@@ -44,7 +44,22 @@ export function render(root, appState, dispatch) {
 
   const drawPhase = myTurn && game.phase === 'draw';
 
-  // ── 덱(상단 한쪽) ──────────────────────────────────────
+  // ── 상대(PC) 탐험 밴드(상단, 박스 없음) — 중앙 박스에 붙어 위로 쌓임 ──
+  const aiBand = el('div', { className: 'exp-band exp-band--ai' });
+  aiBand.append(el('div', { className: 'deck-slot' })); // 덱 칸 자리 맞춤(빈칸)
+  for (const suit of SUITS) {
+    const aiStack = el('div', { className: 'stack stack--ai', dataset: { suit } });
+    const aiExp = ai.expeditions[suit];
+    for (let i = aiExp.length - 1; i >= 0; i -= 1) {
+      const node = cardEl(aiExp[i]);
+      node.style.zIndex = String(i + 1); // 최신(높은 index) 카드가 위로
+      aiStack.append(node);
+    }
+    aiBand.append(aiStack);
+  }
+  desk.append(aiBand);
+
+  // ── 중앙 박스: 드로우 덱 + 색별 버림 더미 ──
   const deckEl = el(
     'div',
     {
@@ -57,65 +72,51 @@ export function render(root, appState, dispatch) {
       el('span', { className: 'deck__count', text: `${game.deck.length}` }),
     ],
   );
-  desk.append(
-    el('div', { className: 'deckbar' }, [
-      el('span', { className: 'deckbar__tag', text: 'PC' }),
-      el('span', { className: 'deckbar__label', text: '드로우 덱' }),
-      deckEl,
-    ]),
-  );
-
-  // ── 5색 필드: 위=상대 탐험 · 가운데=버림 더미 · 아래=내 탐험 ──
-  const field = el('div', { className: 'field' });
+  const center = el('div', { className: 'center' });
+  center.append(deckEl);
   for (const suit of SUITS) {
-    const col = el('div', { className: 'col', dataset: { suit } });
-
-    // 상대 탐험(중앙에서 위로 쌓임) — 역순 렌더 + z-index로 안정적 겹침(최신이 위·맨앞)
-    const aiStack = el('div', { className: 'stack stack--ai' });
-    const aiExp = ai.expeditions[suit];
-    for (let i = aiExp.length - 1; i >= 0; i -= 1) {
-      const node = cardEl(aiExp[i]);
-      node.style.zIndex = String(i + 1); // 최신(높은 index) 카드가 위로
-      aiStack.append(node);
-    }
-
-    // 버림 더미(중앙 축) — 뽑기/버리기 대상
     const pile = game.discards[suit];
     const isDiscardTarget = !!selected && selected.suit === suit;
     const isDrawTarget = drawPhase && pile.length > 0;
     const top = pile[pile.length - 1] || null;
-    const pivot = el(
-      'div',
-      {
-        className: `pivot${isDiscardTarget || isDrawTarget ? ' is-target' : ''}${isDrawTarget ? ' is-draw' : ''}`,
-        dataset: { suit },
-        title: `${SUIT_META[suit].name} 버림 (${pile.length})`,
-        onClick: () => {
-          if (isDrawTarget) dispatch({ type: 'drawFromDiscard', suit });
-          else if (isDiscardTarget) dispatch({ type: 'discardCard', cardId: selected.id });
+    center.append(
+      el(
+        'div',
+        {
+          className: `pivot${isDiscardTarget || isDrawTarget ? ' is-target' : ''}${isDrawTarget ? ' is-draw' : ''}`,
+          dataset: { suit },
+          title: `${SUIT_META[suit].name} 버림 (${pile.length})`,
+          onClick: () => {
+            if (isDrawTarget) dispatch({ type: 'drawFromDiscard', suit });
+            else if (isDiscardTarget) dispatch({ type: 'discardCard', cardId: selected.id });
+          },
         },
-      },
-      [
-        top ? cardEl(top) : el('span', { className: 'pivot__empty', text: SUIT_META[suit].emoji }),
-        pile.length > 1 ? el('span', { className: 'pivot__count', text: String(pile.length) }) : null,
-      ],
+        [
+          top ? cardEl(top) : el('span', { className: 'pivot__empty', text: SUIT_META[suit].emoji }),
+          pile.length > 1 ? el('span', { className: 'pivot__count', text: String(pile.length) }) : null,
+        ],
+      ),
     );
+  }
+  desk.append(center);
 
-    // 내 탐험(중앙에서 아래로 쌓임) + 내기 대상
+  // ── 내 탐험 밴드(하단, 박스 없음) — 중앙 박스에 붙어 아래로 쌓임 ──
+  const meBand = el('div', { className: 'exp-band exp-band--me' });
+  meBand.append(el('div', { className: 'deck-slot' })); // 덱 칸 자리 맞춤(빈칸)
+  for (const suit of SUITS) {
     const canTarget = !!selected && selected.suit === suit && canPlay(human.expeditions[suit], selected);
     const meStack = el('div', {
       className: `stack stack--me${canTarget ? ' is-target' : ''}`,
+      dataset: { suit },
       onClick: canTarget ? () => dispatch({ type: 'playCard', cardId: selected.id, suit }) : undefined,
     });
     for (const c of human.expeditions[suit]) meStack.append(cardEl(c));
     if (canTarget && human.expeditions[suit].length === 0) {
       meStack.append(el('span', { className: 'stack__hint', text: '여기' }));
     }
-
-    col.append(aiStack, pivot, meStack);
-    field.append(col);
+    meBand.append(meStack);
   }
-  desk.append(field);
+  desk.append(meBand);
 
   // ── 내 손패 ────────────────────────────────────────────
   const handWrap = el('section', { className: 'hand' });
