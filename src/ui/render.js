@@ -4,7 +4,7 @@
 import { SUITS } from '../core/cards.js';
 import { canPlay } from '../core/rules.js';
 import { scorePlayer } from '../core/rules.js';
-import { el, cardEl, expeditionColumnEl, discardPileEl, scoreTableEl, SUIT_META } from './components.js';
+import { el, cardEl, scoreTableEl, SUIT_META } from './components.js';
 import { dealIn, pulse, overlayIn } from './animations.js';
 
 /**
@@ -39,61 +39,75 @@ export function render(root, appState, dispatch) {
   const desk = el('div', { className: 'desk' });
   root.append(desk);
 
-  // ── 상대(AI) 탐험 요약 ─────────────────────────────────
-  const aiRow = el('section', { className: 'exp-row exp-row--ai', attrs: { 'aria-label': '상대 탐험' } });
-  aiRow.append(el('span', { className: 'exp-row__tag', text: 'PC' }));
-  const aiCols = el('div', { className: 'exp-row__cols' });
-  for (const suit of SUITS) aiCols.append(expeditionColumnEl(suit, ai.expeditions[suit], { compact: true }));
-  aiRow.append(aiCols);
-  desk.append(aiRow);
-
-  // ── 공용 영역: 덱 + 버림 더미 ──────────────────────────
   const drawPhase = myTurn && game.phase === 'draw';
-  const board = el('section', { className: 'board' });
 
-  const deck = el('div', {
-    className: `deck${drawPhase && game.deck.length ? ' is-target' : ''}${game.deck.length ? '' : ' is-empty'}`,
-    onClick: drawPhase && game.deck.length ? () => dispatch({ type: 'drawFromDeck' }) : undefined,
-    title: `덱 ${game.deck.length}장`,
-  });
-  deck.append(
-    el('div', { className: 'deck__card' }, [el('span', { className: 'card__back', text: '◈' })]),
-    el('span', { className: 'deck__count', text: `${game.deck.length}` }),
+  // ── 덱(상단 한쪽) ──────────────────────────────────────
+  const deckEl = el(
+    'div',
+    {
+      className: `deck${drawPhase && game.deck.length ? ' is-target' : ''}${game.deck.length ? '' : ' is-empty'}`,
+      onClick: drawPhase && game.deck.length ? () => dispatch({ type: 'drawFromDeck' }) : undefined,
+      title: `덱 ${game.deck.length}장`,
+    },
+    [
+      el('div', { className: 'deck__card' }, [el('span', { className: 'card__back', text: '◈' })]),
+      el('span', { className: 'deck__count', text: `${game.deck.length}` }),
+    ],
   );
-  board.append(deck);
+  desk.append(
+    el('div', { className: 'deckbar' }, [
+      el('span', { className: 'deckbar__tag', text: 'PC' }),
+      el('span', { className: 'deckbar__label', text: '드로우 덱' }),
+      deckEl,
+    ]),
+  );
 
-  const discardRow = el('div', { className: 'discards' });
+  // ── 5색 필드: 위=상대 탐험 · 가운데=버림 더미 · 아래=내 탐험 ──
+  const field = el('div', { className: 'field' });
   for (const suit of SUITS) {
-    const isDiscardTarget = selected && selected.suit === suit; // play단계: 선택카드 버리기 대상
-    const isDrawTarget = drawPhase && game.discards[suit].length > 0;
-    discardRow.append(
-      discardPileEl(suit, game.discards[suit], {
-        target: isDiscardTarget || isDrawTarget,
+    const col = el('div', { className: 'col', dataset: { suit } });
+
+    // 상대 탐험(중앙에서 위로 쌓임)
+    const aiStack = el('div', { className: 'stack stack--ai' });
+    for (const c of ai.expeditions[suit]) aiStack.append(stackTile(c));
+
+    // 버림 더미(중앙 축) — 뽑기/버리기 대상
+    const pile = game.discards[suit];
+    const isDiscardTarget = !!selected && selected.suit === suit;
+    const isDrawTarget = drawPhase && pile.length > 0;
+    const top = pile[pile.length - 1] || null;
+    const pivot = el(
+      'div',
+      {
+        className: `pivot${isDiscardTarget || isDrawTarget ? ' is-target' : ''}`,
+        dataset: { suit },
+        title: `${SUIT_META[suit].name} 버림 (${pile.length})`,
         onClick: () => {
           if (isDrawTarget) dispatch({ type: 'drawFromDiscard', suit });
           else if (isDiscardTarget) dispatch({ type: 'discardCard', cardId: selected.id });
         },
-      }),
+      },
+      [
+        top ? stackTile(top) : el('span', { className: 'pivot__empty', text: SUIT_META[suit].emoji }),
+        pile.length > 1 ? el('span', { className: 'pivot__count', text: String(pile.length) }) : null,
+      ],
     );
-  }
-  board.append(discardRow);
-  desk.append(board);
 
-  // ── 내 탐험 5열 (선택 카드의 합법 내기 대상 하이라이트) ──
-  const myRow = el('section', { className: 'exp-row exp-row--me', attrs: { 'aria-label': '내 탐험' } });
-  myRow.append(el('span', { className: 'exp-row__tag', text: '나' }));
-  const myCols = el('div', { className: 'exp-row__cols' });
-  for (const suit of SUITS) {
-    const canTarget = selected && selected.suit === suit && canPlay(human.expeditions[suit], selected);
-    myCols.append(
-      expeditionColumnEl(suit, human.expeditions[suit], {
-        highlight: !!canTarget,
-        onClick: canTarget ? () => dispatch({ type: 'playCard', cardId: selected.id, suit }) : undefined,
-      }),
-    );
+    // 내 탐험(중앙에서 아래로 쌓임) + 내기 대상
+    const canTarget = !!selected && selected.suit === suit && canPlay(human.expeditions[suit], selected);
+    const meStack = el('div', {
+      className: `stack stack--me${canTarget ? ' is-target' : ''}`,
+      onClick: canTarget ? () => dispatch({ type: 'playCard', cardId: selected.id, suit }) : undefined,
+    });
+    for (const c of human.expeditions[suit]) meStack.append(stackTile(c));
+    if (canTarget && human.expeditions[suit].length === 0) {
+      meStack.append(el('span', { className: 'stack__hint', text: '여기' }));
+    }
+
+    col.append(aiStack, pivot, meStack);
+    field.append(col);
   }
-  myRow.append(myCols);
-  desk.append(myRow);
+  desk.append(field);
 
   // ── 내 손패 ────────────────────────────────────────────
   const handWrap = el('section', { className: 'hand' });
@@ -173,6 +187,15 @@ function resultOverlay(game, dispatch) {
   const overlay = el('div', { className: 'result' }, [panel]);
   overlayIn(panel);
   return overlay;
+}
+
+/** 탐험/버림에 쌓이는 작은 카드 타일(겹쳐 쌓임). 색은 data-suit로, id는 하이라이트용 */
+function stackTile(card) {
+  return el('span', {
+    className: `tile tile--${card.kind}`,
+    dataset: { suit: card.suit, cardId: card.id },
+    text: card.kind === 'wager' ? '⟡' : String(card.value),
+  });
 }
 
 const DIFFICULTY_LABELS = { easy: '쉬움', normal: '보통', hard: '어려움' };

@@ -171,93 +171,138 @@ body {
   color: var(--muted);
 }
 
-/* ── 탐험 열(요약/풀) ── */
-.exp-row {
+/* ── 덱 바(상단) ── */
+.deckbar {
   display: flex;
-  align-items: stretch;
-  gap: var(--gap);
-  background: var(--panel);
-  border-radius: var(--radius-panel);
-  padding: 8px;
+  align-items: center;
+  gap: 8px;
 }
-.exp-row__tag {
-  flex: 0 0 auto;
-  align-self: center;
-  width: 26px;
-  text-align: center;
+.deckbar__tag {
   font-family: var(--font-title);
-  font-size: 0.7rem;
-  color: var(--muted);
-  writing-mode: vertical-rl;
+  font-size: 0.72rem;
   letter-spacing: 0.1em;
+  color: var(--muted);
 }
-.exp-row__cols {
+.deckbar__label {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+/* ── 5색 필드(박스 없음): 위=상대 · 가운데=버림 · 아래=나 ── */
+.field {
+  flex: 1 1 0;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 6px;
-  flex: 1;
+  align-items: stretch;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 28px;
+}
+.stack--ai {
+  flex: 1 1 0;
+  flex-direction: column-reverse; /* 중앙(버림)에서 위로 쌓임 */
+  justify-content: flex-start;
+}
+.stack--me {
+  flex: 1 1 0;
+  justify-content: flex-start; /* 중앙에서 아래로 쌓임 */
+}
+.stack--me.is-target {
+  outline: 2px dashed var(--gold);
+  outline-offset: 2px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.stack__hint {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--gold);
+  padding: 4px 0;
 }
 
-.exp-col {
-  background: #0000002e;
-  border: 1px solid #ffffff12;
-  border-radius: 10px;
-  padding: 4px 3px;
-  min-height: 64px;
+/* 겹쳐 쌓이는 카드 타일 */
+.tile {
+  height: 24px;
+  border-radius: 6px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
+  justify-content: center;
+  font-family: var(--font-title);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--suit) 82%, #000), color-mix(in srgb, var(--suit) 45%, #000));
+  border: 1px solid #00000055;
+  box-shadow: 0 1px 2px #0007;
 }
-.exp-col--compact {
-  min-height: 46px;
+.tile--wager {
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--suit) 58%, #000) 0 5px,
+    color-mix(in srgb, var(--suit) 36%, #000) 5px 10px
+  );
 }
-.exp-col__icon {
-  font-size: 0.85rem;
-  opacity: 0.8;
+.tile:not(:first-child) {
+  margin-top: -12px; /* 겹침 */
 }
-.exp-col__stack {
+
+/* 버림 더미(중앙 축) */
+.pivot {
+  flex: 0 0 auto;
+  position: relative;
+  min-height: 30px;
+  margin: 3px 0;
+  border-radius: 7px;
+  border: 1px dashed #ffffff26;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
   align-items: center;
+  justify-content: center;
 }
-.exp-col.is-target {
+.pivot.is-target {
+  border-style: solid;
   border-color: var(--gold);
   box-shadow: var(--glow-gold);
   cursor: pointer;
-  background: #c8a24b1f;
 }
-.chip {
-  min-width: 20px;
-  text-align: center;
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1.4;
-  border-radius: 5px;
-  padding: 0 4px;
-  color: #0c0a06;
-  background: var(--suit, var(--muted));
+.pivot .tile {
+  width: 100%;
+  margin: 0;
 }
-.chip--wager {
-  background: transparent;
-  color: var(--suit, var(--gold));
-  border: 1px solid var(--suit, var(--gold));
+.pivot__empty {
+  font-size: 0.95rem;
+  opacity: 0.4;
+}
+.pivot__count {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 0.56rem;
+  background: #000000a8;
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0 3px;
 }
 
-/* ── 공용 영역: 덱 + 버림 ── */
-.board {
-  display: flex;
-  gap: var(--gap);
-  align-items: center;
-  background: var(--panel);
-  border-radius: var(--radius-panel);
-  padding: 8px;
-}
+/* ── 덱 ── */
 .deck {
   flex: 0 0 auto;
   position: relative;
   text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .deck__card {
   width: 42px;
@@ -281,47 +326,6 @@ body {
 }
 .deck.is-empty {
   opacity: 0.4;
-}
-
-.discards {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 5px;
-  flex: 1;
-}
-.discard {
-  position: relative;
-  aspect-ratio: 3 / 4;
-  border-radius: 9px;
-  border: 1px dashed #ffffff20;
-  display: grid;
-  place-items: center;
-  background: #00000026;
-}
-.discard.is-empty .discard__placeholder {
-  font-size: 1rem;
-  opacity: 0.35;
-}
-.discard.is-target {
-  border-style: solid;
-  border-color: var(--gold);
-  box-shadow: var(--glow-gold);
-  cursor: pointer;
-}
-.discard .card {
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-.discard__count {
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  font-size: 0.6rem;
-  background: #000000a8;
-  color: var(--text);
-  border-radius: 4px;
-  padding: 0 3px;
 }
 
 /* ── 카드 ── */
@@ -510,15 +514,18 @@ body {
   .hand {
     padding: 6px 8px;
   }
-  .exp-col {
-    min-height: 52px;
+  .tile {
+    height: 20px;
   }
-  .exp-col--compact {
-    min-height: 38px;
+  .tile:not(:first-child) {
+    margin-top: -11px;
+  }
+  .pivot {
+    min-height: 26px;
   }
   .deck__card {
-    width: 38px;
-    height: 52px;
+    width: 34px;
+    height: 46px;
   }
 }
 
@@ -527,6 +534,8 @@ body {
   box-shadow: 0 0 0 2px var(--gold), 0 0 12px rgba(200, 162, 75, 0.6);
   z-index: 1;
 }
-.chip.is-last {
-  box-shadow: 0 0 0 2px var(--gold);
+.tile.is-last {
+  position: relative;
+  z-index: 5;
+  box-shadow: 0 0 0 2px var(--gold), 0 1px 2px #0007;
 }
