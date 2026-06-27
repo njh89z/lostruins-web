@@ -534,12 +534,25 @@ body {
     grid-area: desk;
     gap: 4px;
     --deck-w: 38px;
+    justify-content: safe center; /* 보드를 세로 가운데로(넘치면 위부터) */
+  }
+  /* 보드를 적당한 폭으로 묶어 가운데 정렬(좌측 넓은 칸에서 얇게 퍼지지 않게) */
+  .exp-band,
+  .center {
+    width: 100%;
+    max-width: 360px;
+    margin-inline: auto;
+  }
+  /* 빈 탐험도 최소 높이를 줘 보드가 허전하지 않게 */
+  .exp-band {
+    flex: 0 1 auto;
+    min-height: 56px;
   }
   .topbar__logo {
     font-size: 1rem;
   }
   .center {
-    padding: 4px;
+    padding: 4px 6px; /* 좌우 6px → 위/아래 밴드 열과 정렬 */
   }
   .deck__card {
     width: 30px;
