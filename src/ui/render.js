@@ -8,7 +8,7 @@ import { el, cardEl, scoreTableEl, SUIT_META } from './components.js';
 import { dealIn, pulse, overlayIn } from './animations.js';
 
 /** 빌드 버전(우하단 배지). 배포(sw 캐시)와 함께 올린다 — 갱신 확인용 */
-const BUILD = 'v16';
+const BUILD = 'v17';
 
 /**
  * @param {HTMLElement} root
@@ -70,9 +70,14 @@ export function render(root, appState, dispatch) {
   for (const suit of SUITS) {
     const col = el('div', { className: 'col', dataset: { suit } });
 
-    // 상대 탐험(중앙에서 위로 쌓임) — 손패와 같은 카드 모양으로 겹쳐 쌓임
+    // 상대 탐험(중앙에서 위로 쌓임) — 역순 렌더 + z-index로 안정적 겹침(최신이 위·맨앞)
     const aiStack = el('div', { className: 'stack stack--ai' });
-    for (const c of ai.expeditions[suit]) aiStack.append(cardEl(c));
+    const aiExp = ai.expeditions[suit];
+    for (let i = aiExp.length - 1; i >= 0; i -= 1) {
+      const node = cardEl(aiExp[i]);
+      node.style.zIndex = String(i + 1); // 최신(높은 index) 카드가 위로
+      aiStack.append(node);
+    }
 
     // 버림 더미(중앙 축) — 뽑기/버리기 대상
     const pile = game.discards[suit];
@@ -82,7 +87,7 @@ export function render(root, appState, dispatch) {
     const pivot = el(
       'div',
       {
-        className: `pivot${isDiscardTarget || isDrawTarget ? ' is-target' : ''}`,
+        className: `pivot${isDiscardTarget || isDrawTarget ? ' is-target' : ''}${isDrawTarget ? ' is-draw' : ''}`,
         dataset: { suit },
         title: `${SUIT_META[suit].name} 버림 (${pile.length})`,
         onClick: () => {

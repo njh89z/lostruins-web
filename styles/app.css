@@ -210,14 +210,18 @@ body {
   align-items: center;
   min-height: 30px;
 }
+/* 상대 탐험: 상단(PC쪽)에 붙어 중앙으로 자람. 역순 렌더+z-index로 최신이 맨 위.
+   overflow로 길어져도 안쪽(버림 더미)을 침범하지 않게 — 버림 탭 보호 */
 .stack--ai {
   flex: 1 1 0;
-  flex-direction: column-reverse; /* 중앙(버림)에서 위로 쌓임 */
   justify-content: flex-start;
+  overflow: hidden;
 }
+/* 내 탐험: 하단(내 손패쪽)에 붙어 중앙으로 자람. 최신이 맨 아래(바깥) */
 .stack--me {
   flex: 1 1 0;
-  justify-content: flex-start; /* 중앙에서 아래로 쌓임 */
+  justify-content: flex-end;
+  overflow: hidden;
 }
 .stack--me.is-target {
   outline: 2px dashed var(--gold);
@@ -261,6 +265,20 @@ body {
   border-color: var(--gold);
   box-shadow: var(--glow-gold);
   cursor: pointer;
+}
+/* 뽑기 단계: 가져올 수 있는 더미·덱을 펄스로 안내 */
+.pivot.is-draw,
+.deck.is-target .deck__card {
+  animation: drawPulse 1.1s ease-in-out infinite;
+}
+@keyframes drawPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px var(--gold);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--gold), 0 0 14px rgba(200, 162, 75, 0.6);
+  }
 }
 .pivot .card {
   width: 100%;
