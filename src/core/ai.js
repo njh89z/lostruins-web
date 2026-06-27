@@ -13,8 +13,8 @@ import { applyPlay, applyDiscard, applyDraw } from './game.js';
 // lateDeck: 남은 덱이 이 미만이면 신규 착수 금지(0=막판 규율 없음).
 const NORMAL = { m2: 21, m3: 17, m4: 17, wager: 34, lateDeck: 8 };
 const EASY = { m2: 15, m3: 13, m4: 12, wager: 28, lateDeck: 0 };
-/** hard 롤아웃 표본 수(클수록 강하고 느림). 아레나 검증: K=40 → normal 대비 ~56%. */
-const HARD_K = 40;
+/** hard 롤아웃 표본 수(클수록 강하고 느림). K=64 + 모든-버리기-후보는 이전 hard 대비 ~56%. */
+const HARD_K = 64;
 
 function sumNumbers(cards) {
   let s = 0;
@@ -200,7 +200,8 @@ function rolloutMargin(detState, who) {
   return scorePlayer(g.players[who]).total - scorePlayer(g.players[who === 'human' ? 'ai' : 'human']).total;
 }
 
-/** hard 행동: play 단계는 후보 수들을 K회 결정적 롤아웃으로 평가, draw는 휴리스틱 */
+/** hard 행동: play 단계는 후보 수들을 K회 결정적 롤아웃으로 평가, draw는 휴리스틱.
+ * 후보 = 모든 합법 내기 + 모든 버리기(휴리스틱 한 수만 보던 것보다 강함, 아레나 검증). */
 function chooseHard(state, K) {
   if (state.phase !== 'play') return heuristicMove(state, NORMAL);
   const who = state.turn;
@@ -208,8 +209,7 @@ function chooseHard(state, K) {
 
   const cands = [];
   for (const c of ps.hand) if (canPlay(ps.expeditions[c.suit], c)) cands.push({ type: 'play', cardId: c.id, suit: c.suit });
-  const heur = heuristicMove(state, NORMAL); // 휴리스틱의 한 수(특히 버리기)도 후보에 포함
-  if (heur.type === 'discard' || !cands.some((m) => m.cardId === heur.cardId)) cands.push(heur);
+  for (const c of ps.hand) cands.push({ type: 'discard', cardId: c.id });
   if (cands.length === 1) return cands[0];
 
   const base = hashState(state, who);
