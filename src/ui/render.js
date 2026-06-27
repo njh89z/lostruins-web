@@ -35,13 +35,17 @@ export function render(root, appState, dispatch) {
     el('p', { className: `message${ui.aiThinking ? ' is-thinking' : ''}`, text: ui.message }),
   );
 
+  // 중앙 데스크: 상단 제목·하단 손패를 제외한 남는 공간을 채운다(가로뷰 스크롤 방지)
+  const desk = el('div', { className: 'desk' });
+  root.append(desk);
+
   // ── 상대(AI) 탐험 요약 ─────────────────────────────────
   const aiRow = el('section', { className: 'exp-row exp-row--ai', attrs: { 'aria-label': '상대 탐험' } });
   aiRow.append(el('span', { className: 'exp-row__tag', text: 'PC' }));
   const aiCols = el('div', { className: 'exp-row__cols' });
   for (const suit of SUITS) aiCols.append(expeditionColumnEl(suit, ai.expeditions[suit], { compact: true }));
   aiRow.append(aiCols);
-  root.append(aiRow);
+  desk.append(aiRow);
 
   // ── 공용 영역: 덱 + 버림 더미 ──────────────────────────
   const drawPhase = myTurn && game.phase === 'draw';
@@ -73,7 +77,7 @@ export function render(root, appState, dispatch) {
     );
   }
   board.append(discardRow);
-  root.append(board);
+  desk.append(board);
 
   // ── 내 탐험 5열 (선택 카드의 합법 내기 대상 하이라이트) ──
   const myRow = el('section', { className: 'exp-row exp-row--me', attrs: { 'aria-label': '내 탐험' } });
@@ -89,7 +93,7 @@ export function render(root, appState, dispatch) {
     );
   }
   myRow.append(myCols);
-  root.append(myRow);
+  desk.append(myRow);
 
   // ── 내 손패 ────────────────────────────────────────────
   const handWrap = el('section', { className: 'hand' });
