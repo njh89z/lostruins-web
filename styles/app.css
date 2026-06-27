@@ -507,23 +507,36 @@ body {
   }
 }
 
-/* 가로뷰(가로 ≥ 세로): 낮은 높이에 전부 들어가도록 폭은 더 쓰고 세로는 압축 */
+/* 가로뷰(가로 ≥ 세로): 보드는 좌측, 손패는 우측 세로 배치 */
 @media (min-aspect-ratio: 1 / 1) {
   .app {
-    max-width: 680px; /* 가로 공간 활용(중앙 정렬) */
-    padding: 6px 14px calc(6px + env(safe-area-inset-bottom));
+    max-width: 820px;
+    display: grid;
+    grid-template-columns: 1fr 150px; /* 보드 | 손패 */
+    grid-template-rows: auto auto 1fr; /* 헤더 / 메시지 / 데스크 */
+    grid-template-areas:
+      'header header'
+      'msg    hand'
+      'desk   hand';
+    gap: 4px 10px;
+    padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
+  }
+  .topbar {
+    grid-area: header;
+  }
+  .message {
+    grid-area: msg;
+    font-size: 0.74rem;
+    min-height: 0;
+    text-align: left;
+  }
+  .desk {
+    grid-area: desk;
     gap: 4px;
+    --deck-w: 38px;
   }
   .topbar__logo {
     font-size: 1rem;
-  }
-  .message {
-    font-size: 0.74rem;
-    min-height: 0;
-  }
-  .desk {
-    gap: 4px;
-    --deck-w: 38px;
   }
   .center {
     padding: 4px;
@@ -542,12 +555,28 @@ body {
   .stack .card:not(:first-child) {
     margin-top: -40px;
   }
-  /* 손패: 한 줄, 카드 살짝 작게 */
+
+  /* 손패: 우측 세로 패널, 카드는 줄바꿈해 채움 */
   .hand {
-    padding: 5px 8px;
+    grid-area: hand;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 6px;
+  }
+  .hand__cards {
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 5px;
   }
   .hand__cards .card {
-    max-width: 46px;
+    flex: 0 0 auto;
+    width: 40px;
+    max-width: 40px;
+  }
+  .hand__hint {
+    font-size: 0.7rem;
   }
 }
 

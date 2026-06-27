@@ -8,7 +8,7 @@ import { el, cardEl, scoreTableEl, SUIT_META } from './components.js';
 import { dealIn, pulse, overlayIn } from './animations.js';
 
 /** 빌드 버전(우하단 배지). 배포(sw 캐시)와 함께 올린다 — 갱신 확인용 */
-const BUILD = 'v19';
+const BUILD = 'v20';
 
 /**
  * @param {HTMLElement} root
