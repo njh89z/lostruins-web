@@ -8,7 +8,7 @@ import { el, cardEl, scoreTableEl, SUIT_META } from './components.js';
 import { dealIn, pulse, overlayIn } from './animations.js';
 
 /** 빌드 버전(우하단 배지). 배포(sw 캐시)와 함께 올린다 — 갱신 확인용 */
-const BUILD = 'v23';
+const BUILD = 'v24';
 
 // 재렌더마다 깜빡이지 않도록: 직전 렌더 상태를 기억한다.
 let prevHandIds = new Set(); // 손패 등장 애니메이션은 '새로 들어온 카드'에만
@@ -32,12 +32,20 @@ export function render(root, appState, dispatch) {
   root.append(
     el('header', { className: 'topbar' }, [
       el('h1', { className: 'topbar__logo', text: 'LOSTRUINS' }),
-      el('button', {
-        className: 'btn btn--ghost',
-        text: '새 게임',
-        attrs: { type: 'button' },
-        onClick: () => dispatch({ type: 'openStartModal' }),
-      }),
+      el('div', { className: 'topbar__actions' }, [
+        el('button', {
+          className: 'btn btn--ghost',
+          text: '게임 설명',
+          attrs: { type: 'button' },
+          onClick: () => dispatch({ type: 'openHelp' }),
+        }),
+        el('button', {
+          className: 'btn btn--ghost',
+          text: '새 게임',
+          attrs: { type: 'button' },
+          onClick: () => dispatch({ type: 'openStartModal' }),
+        }),
+      ]),
     ]),
     el('p', { className: `message${ui.aiThinking ? ' is-thinking' : ''}`, text: ui.message }),
   );
@@ -183,6 +191,11 @@ export function render(root, appState, dispatch) {
     root.append(startModal(ui.difficulty, dispatch));
   }
 
+  // ── 게임 설명 모달 ─────────────────────────────────────
+  if (ui.showHelp) {
+    root.append(helpModal(dispatch));
+  }
+
   // 버전 배지(갱신 확인용)
   root.append(el('div', { className: 'build', text: BUILD }));
 }
@@ -239,6 +252,53 @@ function startModal(current, dispatch) {
     className: 'modal',
     onClick: (e) => {
       if (e.target === overlay) dispatch({ type: 'closeStartModal' });
+    },
+  }, [panel]);
+  overlayIn(panel);
+  return overlay;
+}
+
+/** 게임 설명·룰 모달 */
+function helpModal(dispatch) {
+  const section = (title, items) =>
+    el('div', { className: 'help__sec' }, [
+      el('h3', { className: 'help__h', text: title }),
+      el('ul', { className: 'help__list' }, items.map((t) => el('li', { html: t }))),
+    ]);
+
+  const panel = el('div', { className: 'modal__panel modal__panel--help' }, [
+    el('h2', { className: 'modal__title', text: '게임 설명' }),
+    el('p', { className: 'modal__sub', text: '잃어버린 5곳의 유적으로 탐험대를 보내 PC와 점수를 겨룹니다.' }),
+    section('목표', [
+      '🏜️사막 · 🏔️설산 · 🌋화산 · 🌿정글 · 🌊심해 — 5색 탐험의 점수 합이 높은 쪽이 승리.',
+    ]),
+    section('내 차례 (①→② 순서로 한 번씩)', [
+      '<b>① 카드 1장 처리</b> — 손패를 탭해 <b>내 색 줄에 내기</b>, 또는 가운데 <b>버림 더미에 버리기</b>.',
+      '<b>② 카드 1장 뽑기</b> — 가운데 <b>드로우 덱</b> 또는 아무 <b>버림 더미 맨 위</b>에서 1장.',
+    ]),
+    section('내기 규칙', [
+      '같은 색은 <b>오름차순</b>으로만 (예: 7을 냈으면 8·9·10만).',
+      '<b>투자 카드(⟡)</b>는 그 색에 <b>숫자를 내기 전에만</b> 낼 수 있고, 여러 장 가능.',
+    ]),
+    section('점수', [
+      '탐험 점수 = (숫자 합 − 20) × (1 + 투자 수)',
+      '그 탐험의 카드가 <b>8장 이상</b>이면 <b>+20</b> 보너스.',
+      '한 색에 카드를 내면 <b>−20</b>에서 시작 — 본전(20)을 넘길 자신이 있을 때만 착수!',
+      '예) 투자1 + [5,7,10] → (22−20)×2 = <b>+4</b> · 투자2 + [2] → (2−20)×3 = <b>−54</b>',
+    ]),
+    section('종료', ['<b>드로우 덱이 바닥나면</b> 그 턴까지 마무리하고 점수를 비교합니다.']),
+    section('난이도', ['쉬움 · 보통 · 어려움(수읽기). 헤더 <b>새 게임</b>에서 선택해 시작합니다.']),
+    el('button', {
+      className: 'btn btn--primary',
+      text: '닫기',
+      attrs: { type: 'button' },
+      onClick: () => dispatch({ type: 'closeHelp' }),
+    }),
+  ]);
+  const overlay = el('div', {
+    className: 'modal',
+    onClick: (e) => {
+      if (e.target === overlay) dispatch({ type: 'closeHelp' });
     },
   }, [panel]);
   overlayIn(panel);

@@ -30,6 +30,7 @@ export function initialAppState(difficulty = 'normal', showStartModal = false) {
       lastDrawnHuman: null, // 내가 마지막에 뽑아온 카드 id — 하이라이트
       difficulty, // 'easy' | 'normal' | 'hard'
       showStartModal, // 난이도 선택 모달
+      showHelp: false, // 게임 설명 모달
     },
   };
 }
@@ -107,6 +108,14 @@ export function createViewModel(store) {
 
       case 'closeStartModal':
         update(null, { showStartModal: false });
+        return;
+
+      case 'openHelp':
+        update(null, { showHelp: true, selectedCardId: null });
+        return;
+
+      case 'closeHelp':
+        update(null, { showHelp: false });
         return;
 
       case 'startGame': {
